@@ -1,94 +1,483 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat WebSocket con Vue 3</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main id="app" class="container py-4 py-md-5 app-shell">
-      <div class="row g-4">
-        <section class="col-12 col-lg-4">
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h1 class="h4 mb-3">Chat WebSocket</h1>
 
-              <div class="d-flex align-items-center gap-2 mb-3">
-                <span class="status-dot" :class="statusClass"></span>
-                <span class="small text-muted">{{ statusText }}</span>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpaceChat - Premium Discord/WhatsApp WebSockets</title>
+  <!-- Google Fonts: Outfit (títulos) e Inter (cuerpo) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <!-- Lucide Icons para una interfaz moderna -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main id="app" class="app-container" v-cloak>
+
+    <!-- PANELES LATERALES + CHAT CENTRAL -->
+    <div v-if="hasJoined" class="app-layout">
+
+      <!-- PANEL IZQUIERDO: CANALES Y DMs (Estilo Discord + WhatsApp) -->
+      <aside class="sidebar-left">
+
+        <!-- Cabecera del Servidor / Logo -->
+        <div class="sidebar-header">
+          <div class="brand">
+            <div class="brand-logo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a10 10 0 0 0-7.38 16.75L3 21l4.25-1.62A10 10 0 1 0 12 2z" />
+              </svg>
+            </div>
+            <span class="brand-name">SpaceChat</span>
+          </div>
+          <div class="status-indicator" :class="dbStatusClass" :title="dbStatusTitle">
+            <span class="status-dot"></span>
+          </div>
+        </div>
+
+        <!-- Perfil del Usuario Actual (Ajustes Rápidos) -->
+        <div class="user-profile-section">
+          <div class="user-card-trigger" @click="toggleProfileEdit">
+            <div class="user-avatar-wrapper">
+              <div class="user-avatar"
+                :style="{ background: 'linear-gradient(135deg, ' + myColor + ' 0%, #111 100%)' }">
+                {{ avatarEmoji(myAvatar) }}
+              </div>
+              <span class="status-badge online"></span>
+            </div>
+            <div class="user-info">
+              <span class="user-name">{{ myName }}</span>
+              <span class="user-tag">Ajustes de Perfil</span>
+            </div>
+            <i data-lucide="settings" class="settings-icon"></i>
+          </div>
+
+          <!-- Popover de Edición de Perfil (Glassmorphism Modal) -->
+          <transition name="fade">
+            <div v-if="showProfileEdit" class="profile-edit-dropdown">
+              <div class="dropdown-header">
+                <h4>Editar Perfil</h4>
+                <button class="close-btn" @click="toggleProfileEdit">&times;</button>
               </div>
 
-              <div class="d-flex justify-content-between align-items-start gap-2 mb-0">
-                <div>
-                  <button class="btn btn-outline-secondary btn-sm" type="button" @click="clearMessages">Limpiar</button>
+              <div class="dropdown-body">
+                <div class="form-group">
+                  <label>Nombre de Usuario</label>
+                  <input type="text" v-model.trim="tempName" maxlength="20" @keyup.enter="saveProfile"
+                    placeholder="Tu apodo..." />
                 </div>
+
+                <div class="form-group">
+                  <label>Elegir Avatar</label>
+                  <div class="avatar-grid">
+                    <button v-for="(emoji, key) in availableAvatars" :key="key" type="button" class="avatar-select-btn"
+                      :class="{ active: tempAvatar === key }" @click="tempAvatar = key">
+                      {{ emoji }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Color de Acento</label>
+                  <div class="color-grid">
+                    <button v-for="color in presetColors" :key="color" type="button" class="color-select-btn"
+                      :style="{ backgroundColor: color }" :class="{ active: tempColor === color }"
+                      @click="tempColor = color"></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dropdown-footer">
+                <button class="btn btn-secondary btn-sm" @click="toggleProfileEdit">Cancelar</button>
+                <button class="btn btn-primary btn-sm" @click="saveProfile">Guardar</button>
+              </div>
+            </div>
+          </transition>
+        </div>
+
+        <!-- Contenido del Sidebar Scrollable -->
+        <div class="sidebar-scrollable">
+
+          <!-- SECCIÓN: CANALES (Estilo Discord) -->
+          <div class="sidebar-section">
+            <div class="section-title">
+              <span>Canales Públicos</span>
+              <span class="count">{{ channels.length }}</span>
+            </div>
+            <ul class="channel-list">
+              <li v-for="channel in channels" :key="channel.id"
+                :class="{ active: activeRoom === channel.id && !activeDMRecipient }" @click="selectChannel(channel.id)">
+                <span class="channel-hash">#</span>
+                <span class="channel-name">{{ channel.name }}</span>
+                <span v-if="unreadChannels[channel.id]" class="unread-dot"></span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- SECCIÓN: CHATS PRIVADOS (Estilo WhatsApp) -->
+          <div class="sidebar-section">
+            <div class="section-title">
+              <span>Mensajes Directos</span>
+              <span class="count">{{ activeUsersCount }}</span>
+            </div>
+            <ul class="dm-list">
+              <!-- Si no hay nadie más conectado -->
+              <li v-if="onlineUsersList.length === 0" class="empty-list-placeholder">
+                No hay otros usuarios en línea.
+              </li>
+
+              <li v-for="user in onlineUsersList" :key="user.sessionId"
+                :class="{ active: activeDMRecipient && activeDMRecipient.sessionId === user.sessionId }"
+                @click="selectDM(user)">
+                <div class="user-avatar-wrapper">
+                  <div class="user-avatar small"
+                    :style="{ background: 'linear-gradient(135deg, ' + user.color + ' 0%, #1e1f22 100%)' }">
+                    {{ avatarEmoji(user.avatar) }}
+                  </div>
+                  <span class="status-badge" :class="userStatusClass(user.sessionId)"></span>
+                </div>
+                <div class="dm-user-info">
+                  <span class="dm-user-name" :style="{ color: user.color }">{{ user.displayName }}</span>
+                  <span class="dm-user-status">{{ getDMSubtext(user.sessionId) }}</span>
+                </div>
+                <!-- Indicador de mensaje no leído -->
+                <span v-if="unreadDMs[user.sessionId]" class="unread-badge">
+                  {{ unreadDMs[user.sessionId] }}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+      </aside>
+
+      <!-- PANEL CENTRAL: CHAT (Estilo WhatsApp dentro de Discord) -->
+      <section class="chat-area">
+
+        <!-- Cabecera del Chat Activo -->
+        <div class="chat-header">
+          <div class="chat-title-info">
+            <div v-if="!activeDMRecipient" class="room-indicator">
+              <span class="hash">#</span>
+              <h2 class="chat-title">{{ activeChannelName }}</h2>
+              <p class="chat-description">{{ activeChannelDescription }}</p>
+            </div>
+            <div v-else class="room-indicator">
+              <div class="user-avatar-wrapper">
+                <div class="user-avatar small"
+                  :style="{ background: 'linear-gradient(135deg, ' + activeDMRecipient.color + ' 0%, #1e1f22 100%)' }">
+                  {{ avatarEmoji(activeDMRecipient.avatar) }}
+                </div>
+                <span class="status-badge" :class="userStatusClass(activeDMRecipient.sessionId)"></span>
+              </div>
+              <div>
+                <h2 class="chat-title" :style="{ color: activeDMRecipient.color }">{{ activeDMRecipient.displayName }}
+                </h2>
+                <p class="chat-description">{{ getDMStatusDescription(activeDMRecipient.sessionId) }}</p>
               </div>
             </div>
           </div>
-        </section>
 
-        <section class="col-12 col-lg-8">
-          <div class="card shadow-sm h-100">
-            <div class="card-body d-grid gap-3">
-              <div class="row g-2 align-items-end">
-                <div class="col-12 col-md">
-                  <label class="form-label mb-1" for="nameInput">Tu nombre</label>
-                  <input
-                    id="nameInput"
-                    class="form-control"
-                    type="text"
-                    maxlength="20"
-                    placeholder="Ej. Ana"
-                    v-model.trim="name"
-                    @keyup.enter="updateName"
-                  />
+          <div class="chat-header-actions">
+            <button class="header-action-btn" @click="clearMessages" title="Limpiar pantalla (local)">
+              <i data-lucide="trash-2"></i>
+            </button>
+            <button class="header-action-btn toggle-members-btn" @click="toggleRightPanel"
+              :class="{ active: showRightPanel }" title="Miembros de la sala">
+              <i data-lucide="users"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Historial de Mensajes -->
+        <div class="messages-container" ref="messagesBox">
+          <div class="messages-flow">
+
+            <!-- Presentación de bienvenida en el canal/DM -->
+            <div class="channel-welcome-banner">
+              <div class="banner-icon" :style="welcomeBannerStyle">
+                <span v-if="!activeDMRecipient">#</span>
+                <span v-else>{{ avatarEmoji(activeDMRecipient.avatar) }}</span>
+              </div>
+              <h3>{{ welcomeBannerTitle }}</h3>
+              <p>{{ welcomeBannerDescription }}</p>
+            </div>
+
+            <!-- Listado de Mensajes -->
+            <div v-for="message in activeMessages" :key="message.id" class="message-row" :class="{ 
+                  'system-message': message.type === 'system',
+                  'my-message-row': message.sender_id === mySessionId && message.type !== 'system'
+                }">
+              <!-- Mensajes del Sistema -->
+              <div v-if="message.type === 'system'" class="system-message-content">
+                <span class="system-dot"></span>
+                <span class="system-text" v-html="formatSystemMessage(message.text)"></span>
+                <span class="system-time">{{ formatTime(message.created_at) }}</span>
+              </div>
+
+              <!-- Mensajes Normales (Discord Style con toque premium) -->
+              <div v-else class="user-message-content">
+                <div class="message-avatar-container">
+                  <div class="message-avatar"
+                    :style="{ background: 'linear-gradient(135deg, ' + message.sender_color + ' 0%, #1e1f22 100%)' }">
+                    {{ avatarEmoji(message.sender_avatar) }}
+                  </div>
                 </div>
-                <div class="col-12 col-md-auto">
-                  <button class="btn btn-primary w-100" type="button" @click="updateName">Usar nombre</button>
+                <div class="message-body">
+                  <div class="message-header-info">
+                    <span class="message-username" :style="{ color: message.sender_color }">{{ message.sender_name
+                      }}</span>
+                    <span v-if="message.sender_id === mySessionId" class="badge-me">tú</span>
+                    <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                  </div>
+
+                  <div class="message-bubble">
+                    <!-- Renderizado de Texto Inteligente -->
+                    <p class="message-text" v-if="!isGIF(message.text)">{{ message.text }}</p>
+
+                    <!-- Renderizado Rich de Imagen / GIF si se detecta URL -->
+                    <div class="rich-media-container" v-if="isMediaURL(message.text)">
+                      <img :src="getMediaURL(message.text)" class="chat-embedded-image" alt="Embedded media"
+                        @load="scrollToBottom" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="messages" ref="messagesBox">
-                <div
-                  v-for="message in messages"
-                  :key="message.id"
-                  class="alert mb-2 py-2 px-3 message-item"
-                  :class="messageClass(message.kind)"
-                >
-                  <span class="message-meta">{{ message.meta }}</span>
-                  <p class="mb-0">{{ message.text }}</p>
-                </div>
-              </div>
+            </div>
 
-              <form class="row g-2 align-items-center" @submit.prevent="sendMessage">
-                <div class="col-12 col-md">
-                  <input
-                    id="messageInput"
-                    class="form-control"
-                    type="text"
-                    maxlength="200"
-                    placeholder="Escribe un mensaje"
-                    autocomplete="off"
-                    v-model.trim="message"
-                  />
+          </div>
+        </div>
+
+        <!-- Indicador de Escritura -->
+        <div class="typing-indicator-container">
+          <transition name="fade">
+            <div v-if="someoneIsTyping" class="typing-indicator">
+              <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <span class="typing-text">{{ typingIndicatorText }}</span>
+            </div>
+          </transition>
+        </div>
+
+        <!-- Input de Mensaje y Selectores -->
+        <div class="chat-input-section">
+          <form class="chat-input-form" @submit.prevent="sendMessage">
+
+            <!-- Acciones Izquierda: Emoji y GIF (Estilo Discord) -->
+            <div class="input-actions-left">
+              <!-- Botón Emojis -->
+              <button type="button" class="action-trigger" @click.stop="toggleEmojiPicker"
+                :class="{ active: showEmojiPicker }" title="Añadir emoji">
+                <i data-lucide="smile"></i>
+              </button>
+
+              <!-- Selector de Emojis Popover -->
+              <transition name="slide-up">
+                <div v-if="showEmojiPicker" class="emoji-picker-popover" @click.stop>
+                  <div class="popover-tabs">
+                    <button v-for="cat in emojiCategories" :key="cat.id" type="button" class="tab-btn"
+                      :class="{ active: activeEmojiCategory === cat.id }" @click="activeEmojiCategory = cat.id">
+                      {{ cat.icon }}
+                    </button>
+                  </div>
+                  <div class="emoji-grid">
+                    <button v-for="emoji in getEmojisByCategory(activeEmojiCategory)" :key="emoji" type="button"
+                      class="emoji-btn" @click="insertEmoji(emoji)">
+                      {{ emoji }}
+                    </button>
+                  </div>
                 </div>
-                <div class="col-12 col-md-auto">
-                  <button type="submit" class="btn btn-success w-100">Enviar</button>
+              </transition>
+
+              <!-- Botón GIFs -->
+              <button type="button" class="action-trigger" @click.stop="toggleGIFPicker"
+                :class="{ active: showGIFPicker }" title="Buscar GIF">
+                <span class="gif-icon-btn">GIF</span>
+              </button>
+
+              <!-- Selector de GIFs Popover -->
+              <transition name="slide-up">
+                <div v-if="showGIFPicker" class="gif-picker-popover" @click.stop>
+                  <div class="gif-search-box">
+                    <input type="text" v-model="gifSearchQuery" placeholder="Buscar GIFs de reacción..."
+                      @input="debounceGIFSearch" />
+                    <i data-lucide="search" class="search-icon"></i>
+                  </div>
+
+                  <div class="gif-categories" v-if="!gifSearchQuery">
+                    <button v-for="cat in gifCategories" :key="cat" type="button" class="gif-cat-tag"
+                      @click="selectGIFCategory(cat)">
+                      {{ cat }}
+                    </button>
+                  </div>
+
+                  <div class="gif-grid">
+                    <div v-if="loadingGIFs" class="gif-loading">
+                      <div class="spinner"></div>
+                    </div>
+
+                    <button v-for="gif in filteredGIFs" :key="gif.id" type="button" class="gif-item-btn"
+                      @click="sendGIF(gif.url)">
+                      <img :src="gif.preview" alt="reaction-gif" />
+                    </button>
+
+                    <div v-if="filteredGIFs.length === 0 && !loadingGIFs" class="no-gifs">
+                      No se encontraron GIFs.
+                    </div>
+                  </div>
                 </div>
-              </form>
+              </transition>
+            </div>
+
+            <!-- Input de Texto Central -->
+            <div class="input-text-wrapper">
+              <input type="text" v-model="messageText" :placeholder="inputPlaceholder" maxlength="500"
+                autocomplete="off" @input="handleInput" ref="chatInput" />
+            </div>
+
+            <!-- Acción Derecha: Botón Enviar -->
+            <div class="input-actions-right">
+              <button type="submit" class="send-message-btn" :disabled="!messageText.trim()">
+                <i data-lucide="send"></i>
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+      </section>
+
+      <!-- PANEL DERECHO: DETALLES DE CANAL Y MIEMBROS (Estilo Discord) -->
+      <aside class="sidebar-right" :class="{ collapsed: !showRightPanel }">
+
+        <div class="sidebar-header">
+          <h3>Miembros</h3>
+          <span class="members-count">{{ onlineUsersList.length }}</span>
+        </div>
+
+        <div class="sidebar-scrollable">
+
+          <!-- Grupo: EN LÍNEA -->
+          <div class="members-group">
+            <div class="group-title">En línea — {{ onlineUsersList.length }}</div>
+            <ul class="members-list">
+
+              <!-- Miembro Actual (tú) -->
+              <li class="member-item">
+                <div class="user-avatar-wrapper">
+                  <div class="user-avatar small"
+                    :style="{ background: 'linear-gradient(135deg, ' + myColor + ' 0%, #1e1f22 100%)' }">
+                    {{ avatarEmoji(myAvatar) }}
+                  </div>
+                  <span class="status-badge online"></span>
+                </div>
+                <div class="member-info">
+                  <span class="member-name" :style="{ color: myColor }">{{ myName }}</span>
+                  <span class="member-status-text">tú</span>
+                </div>
+              </li>
+
+              <!-- Otros Miembros -->
+              <li v-for="user in onlineUsersList" :key="user.sessionId" class="member-item clickable"
+                @click="selectDM(user)">
+                <div class="user-avatar-wrapper">
+                  <div class="user-avatar small"
+                    :style="{ background: 'linear-gradient(135deg, ' + user.color + ' 0%, #1e1f22 100%)' }">
+                    {{ avatarEmoji(user.avatar) }}
+                  </div>
+                  <span class="status-badge" :class="userStatusClass(user.sessionId)"></span>
+                </div>
+                <div class="member-info">
+                  <span class="member-name" :style="{ color: user.color }">{{ user.displayName }}</span>
+                  <span class="member-status-text">{{ getDMSubtext(user.sessionId) }}</span>
+                </div>
+              </li>
+
+            </ul>
+          </div>
+
+        </div>
+
+      </aside>
+
+    </div>
+
+    <!-- LOBBY DE BIENVENIDA / CONFIGURACIÓN DE IDENTIDAD -->
+    <div v-else class="lobby-container">
+      <div class="lobby-card">
+        <div class="lobby-brand">
+          <div class="lobby-logo-wrapper">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a10 10 0 0 0-7.38 16.75L3 21l4.25-1.62A10 10 0 1 0 12 2z" />
+            </svg>
+          </div>
+          <h1>SpaceChat</h1>
+          <p class="lobby-subtitle">Configura tu identidad estelar antes de ingresar al chat</p>
+        </div>
+
+        <form @submit.prevent="joinChat" class="lobby-form">
+          <!-- Vista previa del avatar -->
+          <div class="lobby-avatar-preview-section">
+            <div class="lobby-avatar-preview"
+              :style="{ background: 'linear-gradient(135deg, ' + tempColor + ' 0%, #111 100%)', boxShadow: '0 0 25px ' + tempColor + '66' }">
+              {{ avatarEmoji(tempAvatar) }}
+            </div>
+            <span class="preview-badge" :style="{ backgroundColor: tempColor }">Listo</span>
+          </div>
+
+          <!-- Input de Nombre -->
+          <div class="form-group">
+            <label class="form-label">Tu Apodo Cósmico</label>
+            <input type="text" v-model.trim="tempName" maxlength="20" class="lobby-input" placeholder="Ingresa tu alias..." required />
+          </div>
+
+          <!-- Selector de Avatar -->
+          <div class="form-group">
+            <label class="form-label">Elige un Avatar</label>
+            <div class="avatar-grid lobby-avatar-grid">
+              <button v-for="(emoji, key) in availableAvatars" :key="key" type="button" class="avatar-select-btn"
+                :class="{ active: tempAvatar === key }" @click="tempAvatar = key">
+                {{ emoji }}
+              </button>
             </div>
           </div>
-        </section>
+
+          <!-- Selector de Color de Acento -->
+          <div class="form-group">
+            <label class="form-label">Color de Acento de Nave</label>
+            <div class="color-grid lobby-color-grid">
+              <button v-for="color in presetColors" :key="color" type="button" class="color-select-btn"
+                :style="{ backgroundColor: color }" :class="{ active: tempColor === color }"
+                @click="tempColor = color"></button>
+            </div>
+          </div>
+
+          <!-- Botón de Ingreso -->
+          <button type="submit" class="btn btn-join-lobby" :style="{ background: 'linear-gradient(135deg, ' + tempColor + ' 0%, #161920 100%)', boxShadow: '0 4px 20px ' + tempColor + '4D' }">
+            <span>Iniciar Vuelo</span>
+            <i data-lucide="rocket"></i>
+          </button>
+        </form>
       </div>
-    </main>
+    </div>
 
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="app.js"></script>
-  </body>
+  </main>
+
+  <!-- Vue 3 Global y Código de la Aplicación -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="app.js"></script>
+</body>
+
 </html>
