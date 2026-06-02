@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpaceChat - Iniciar Sesión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e1f22 0%, #0a0b0d 100%);
+      padding: 20px;
+    }
+
+    .auth-card {
+      background: rgba(30, 31, 34, 0.95);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 450px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .auth-logo {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .auth-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 8px 0;
+    }
+
+    .auth-subtitle {
+      color: #b5bac1;
+      font-size: 14px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      color: #b5bac1;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab.active {
+      background: #5865f2;
+      color: #fff;
+    }
+
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      color: #b5bac1;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 15px;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #5865f2;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .form-input::placeholder {
+      color: #6d7178;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 8px;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(88, 101, 242, 0.4);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      background: rgba(237, 66, 69, 0.1);
+      border: 1px solid rgba(237, 66, 69, 0.3);
+      color: #ed4245;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      background: rgba(67, 181, 129, 0.1);
+      border: 1px solid rgba(67, 181, 129, 0.3);
+      color: #43b581;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .avatar-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .avatar-btn {
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .avatar-btn:hover {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .avatar-btn.selected {
+      border-color: #5865f2;
+      background: rgba(88, 101, 242, 0.2);
+    }
+
+    .color-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .color-btn {
+      width: 100%;
+      height: 40px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .color-btn.selected {
+      border-color: #fff;
+      transform: scale(1.1);
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">💬</div>
+        <h1 class="auth-title">SpaceChat</h1>
+        <p class="auth-subtitle">Conecta con tu equipo en tiempo real</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Iniciar Sesión</button>
+        <button class="auth-tab" onclick="switchTab('register')">Registrarse</button>
+      </div>
+
+      <div id="error-message" class="error-message"></div>
+      <div id="success-message" class="success-message"></div>
+
+      <!-- Formulario de Login -->
+      <form id="login-form" class="auth-form active" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Usuario</label>
+          <input type="text" class="form-input" id="login-username" placeholder="Tu nombre de usuario" required minlength="3" maxlength="20" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-input" id="login-password" placeholder="Tu contraseña" required minlength="4" />
+        </div>
+        <button type="submit" class="btn-submit" id="login-btn">
+          Iniciar Sesión
+        </button>
+      </form>
+
+      <!-- Formulario de Registro -->
+      <form id="register-form" class="auth-form" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label class="form-label">Usuario</label>
+          <input type="text" class="form-input" id="register-username" placeholder="Elige un nombre de usuario" required minlength="3" maxlength="20" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-input" id="register-password" placeholder="Crea una contraseña segura" required minlength="4" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar Contraseña</label>
+          <input type="password" class="form-input" id="register-password-confirm" placeholder="Confirma tu contraseña" required minlength="4" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Elige tu Avatar</label>
+          <div class="avatar-selector" id="avatar-selector">
+            <button type="button" class="avatar-btn selected" data-avatar="avatar1">🐱</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar2">🐶</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar3">🦊</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar4">🤖</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar5">👽</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar6">🐼</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar7">🦁</button>
+            <button type="button" class="avatar-btn" data-avatar="avatar8">🦄</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color de Acento</label>
+          <div class="color-selector" id="color-selector">
+            <button type="button" class="color-btn selected" data-color="#5865f2" style="background: #5865f2;"></button>
+            <button type="button" class="color-btn" data-color="#00a884" style="background: #00a884;"></button>
+            <button type="button" class="color-btn" data-color="#ec4899" style="background: #ec4899;"></button>
+            <button type="button" class="color-btn" data-color="#a855f7" style="background: #a855f7;"></button>
+            <button type="button" class="color-btn" data-color="#06b6d4" style="background: #06b6d4;"></button>
+            <button type="button" class="color-btn" data-color="#f59e0b" style="background: #f59e0b;"></button>
+            <button type="button" class="color-btn" data-color="#10b981" style="background: #10b981;"></button>
+            <button type="button" class="color-btn" data-color="#ef4444" style="background: #ef4444;"></button>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit" id="register-btn">
+          Crear Cuenta
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let selectedAvatar = 'avatar1';
+    let selectedColor = '#5865f2';
+
+    // Cambiar entre tabs de login y registro
+    function switchTab(tab) {
+      const tabs = document.querySelectorAll('.auth-tab');
+      const forms = document.querySelectorAll('.auth-form');
+      
+      tabs.forEach(t => t.classList.remove('active'));
+      forms.forEach(f => f.classList.remove('active'));
+      
+      if (tab === 'login') {
+        tabs[0].classList.add('active');
+        document.getElementById('login-form').classList.add('active');
+      } else {
+        tabs[1].classList.add('active');
+        document.getElementById('register-form').classList.add('active');
+      }
+      
+      hideMessages();
+    }
+
+    // Selección de avatar
+    document.getElementById('avatar-selector').addEventListener('click', (e) => {
+      if (e.target.classList.contains('avatar-btn')) {
+        document.querySelectorAll('.avatar-btn').forEach(btn => btn.classList.remove('selected'));
+        e.target.classList.add('selected');
+        selectedAvatar = e.target.dataset.avatar;
+      }
+    });
+
+    // Selección de color
+    document.getElementById('color-selector').addEventListener('click', (e) => {
+      if (e.target.classList.contains('color-btn')) {
+        document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
+        e.target.classList.add('selected');
+        selectedColor = e.target.dataset.color;
+      }
+    });
+
+    // Mostrar mensaje de error
+    function showError(message) {
+      const errorEl = document.getElementById('error-message');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+      document.getElementById('success-message').classList.remove('show');
+    }
+
+    // Mostrar mensaje de éxito
+    function showSuccess(message) {
+      const successEl = document.getElementById('success-message');
+      successEl.textContent = message;
+      successEl.classList.add('show');
+      document.getElementById('error-message').classList.remove('show');
+    }
+
+    // Ocultar mensajes
+    function hideMessages() {
+      document.getElementById('error-message').classList.remove('show');
+      document.getElementById('success-message').classList.remove('show');
+    }
+
+    // Manejar login
+    async function handleLogin(event) {
+      event.preventDefault();
+      hideMessages();
+
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-btn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span> Iniciando sesión...';
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Guardar sesión en localStorage
+          localStorage.setItem('sessionToken', data.sessionToken);
+          localStorage.setItem('userId', data.user.id);
+          localStorage.setItem('username', data.user.username);
+          localStorage.setItem('avatar', data.user.avatar);
+          localStorage.setItem('color', data.user.color);
+
+          showSuccess('¡Bienvenido de vuelta! Redirigiendo...');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
+        } else {
+          showError(data.error || 'Error al iniciar sesión');
+          btn.disabled = false;
+          btn.textContent = 'Iniciar Sesión';
+        }
+      } catch (error) {
+        showError('Error de conexión. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Iniciar Sesión';
+      }
+    }
+
+    // Manejar registro
+    async function handleRegister(event) {
+      event.preventDefault();
+      hideMessages();
+
+      const username = document.getElementById('register-username').value.trim();
+      const password = document.getElementById('register-password').value;
+      const passwordConfirm = document.getElementById('register-password-confirm').value;
+      const btn = document.getElementById('register-btn');
+
+      if (password !== passwordConfirm) {
+        showError('Las contraseñas no coinciden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span> Creando cuenta...';
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            username, 
+            password,
+            avatar: selectedAvatar,
+            color: selectedColor
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Guardar sesión en localStorage
+          localStorage.setItem('sessionToken', data.sessionToken);
+          localStorage.setItem('userId', data.user.id);
+          localStorage.setItem('username', data.user.username);
+          localStorage.setItem('avatar', data.user.avatar);
+          localStorage.setItem('color', data.user.color);
+
+          showSuccess('¡Cuenta creada! Redirigiendo al chat...');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
+        } else {
+          showError(data.error || 'Error al crear la cuenta');
+          btn.disabled = false;
+          btn.textContent = 'Crear Cuenta';
+        }
+      } catch (error) {
+        showError('Error de conexión. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Crear Cuenta';
+      }
+    }
+
+    // Verificar si ya hay sesión activa
+    window.addEventListener('DOMContentLoaded', async () => {
+      const sessionToken = localStorage.getItem('sessionToken');
+      
+      if (sessionToken) {
+        try {
+          const response = await fetch('/api/validate-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionToken })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            // Sesión válida, redirigir al chat
+            window.location.href = '/';
+          }
+        } catch (error) {
+          // Sesión inválida, continuar en login
+          console.log('No hay sesión válida');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -57,17 +57,17 @@ createApp({
         memes: [],
         tecnologia: []
       },
-      channels: [
-        { id: 'general', name: 'general', description: 'Canal general del servidor. ¡Bienvenido!' },
-        { id: 'gaming', name: 'gaming', description: 'Para hablar de videojuegos, consolas y más.' },
-        { id: 'memes', name: 'memes', description: 'Comparte imágenes graciosas, enlaces y risas.' },
-        { id: 'tecnologia', name: 'tecnología', description: 'Canal de programadores, gadgets y hardware.' }
-      ],
+      channels: [], // Se cargarán desde la API
       activeUsers: [], // Usuarios remotos activos
 
       // Mensajes no leídos (Notificaciones)
       unreadChannels: {},
       unreadDMs: {},
+
+      // Modal de crear canal
+      showCreateChannel: false,
+      newChannelName: '',
+      newChannelDescription: '',
 
       // Interacción
       showRightPanel: true,
@@ -509,7 +509,7 @@ createApp({
     },
 
     // Maneja el ingreso inicial desde el Lobby
-    joinChat() {
+    async joinChat() {
       const cleanName = this.tempName.trim();
       if (!cleanName) return;
 
@@ -529,6 +529,9 @@ createApp({
       localStorage.setItem('nebula_color', this.myColor);
 
       this.hasJoined = true;
+
+      // Cargar canales antes de conectar
+      await this.loadChannels();
 
       // Conectarse a WebSocket ahora que el usuario ingresó formalmente
       this.connect();
@@ -772,10 +775,105 @@ createApp({
           this.$refs.chatInput.focus();
         }
       });
+    },
+
+    // Cargar canales desde la API
+    async loadChannels() {
+      try {
+        const response = await fetch('/api/channels');
+        const data = await response.json();
+        
+        if (data.success && data.channels) {
+          this.channels = data.channels.map(ch => ({
+            id: ch.channel_id,
+            name: ch.name,
+            description: ch.description || ''
+          }));
+          
+          // Inicializar arrays de mensajes para cada canal
+          this.channels.forEach(channel => {
+            if (!this.messages[channel.id]) {
+              this.messages[channel.id] = [];
+            }
+          });
+          
+          console.log('[Canales] Cargados:', this.channels.length);
+        }
+      } catch (error) {
+        console.error('[Canales] Error al cargar:', error);
+        // Usar canales por defecto si falla
+        this.channels = [
+          { id: 'general', name: 'general', description: 'Canal general del servidor' }
+        ];
+      }
+    },
+
+    // Crear un nuevo canal
+    async createChannel() {
+      const name = this.newChannelName.trim().toLowerCase();
+      
+      if (!name) {
+        alert('Debes ingresar un nombre para el canal');
+        return;
+      }
+
+      // Validar formato (solo letras, números y guiones)
+      if (!/^[a-z0-9-]+$/.test(name)) {
+        alert('El nombre solo puede contener letras minúsculas, números y guiones');
+        return;
+      }
+
+      try {
+        const userId = localStorage.getItem('userId') || null;
+        
+        const response = await fetch('/api/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_id: name,
+            name: name,
+            description: this.newChannelDescription.trim(),
+            created_by: userId
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Agregar el nuevo canal a la lista
+          this.channels.push({
+            id: data.channel.channel_id,
+            name: data.channel.name,
+            description: data.channel.description || ''
+          });
+
+          // Inicializar array de mensajes
+          this.messages[data.channel.channel_id] = [];
+
+          // Limpiar formulario y cerrar modal
+          this.newChannelName = '';
+          this.newChannelDescription = '';
+          this.showCreateChannel = false;
+
+          // Seleccionar el nuevo canal
+          this.selectChannel(data.channel.channel_id);
+
+          // Notificar éxito
+          console.log('[Canal] Creado exitosamente:', data.channel.name);
+        } else {
+          alert(data.error || 'Error al crear el canal');
+        }
+      } catch (error) {
+        console.error('[Canal] Error al crear:', error);
+        alert('Error de conexión al crear el canal');
+      }
     }
   },
 
   mounted() {
+    // Cargar canales al iniciar
+    this.loadChannels();
+    
     if (this.hasJoined) {
       this.connect();
     }

@@ -108,7 +108,9 @@
           <div class="sidebar-section">
             <div class="section-title">
               <span>Canales Públicos</span>
-              <span class="count">{{ channels.length }}</span>
+              <button class="btn-add-channel" @click="showCreateChannel = true" title="Crear nuevo canal">
+                <i data-lucide="plus"></i>
+              </button>
             </div>
             <ul class="channel-list">
               <li v-for="channel in channels" :key="channel.id"
@@ -119,6 +121,35 @@
               </li>
             </ul>
           </div>
+
+          <!-- Modal para Crear Canal -->
+          <transition name="fade">
+            <div v-if="showCreateChannel" class="modal-overlay" @click="showCreateChannel = false">
+              <div class="modal-card" @click.stop>
+                <div class="modal-header">
+                  <h3>Crear Nuevo Canal</h3>
+                  <button class="close-btn" @click="showCreateChannel = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                  <div class="form-group">
+                    <label>Nombre del Canal</label>
+                    <input type="text" v-model.trim="newChannelName" maxlength="20" 
+                           placeholder="ej: mi-canal" @keyup.enter="createChannel" />
+                    <small>Solo letras, números y guiones. Sin espacios.</small>
+                  </div>
+                  <div class="form-group">
+                    <label>Descripción (opcional)</label>
+                    <textarea v-model.trim="newChannelDescription" maxlength="100" rows="3"
+                              placeholder="¿De qué trata este canal?"></textarea>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-secondary" @click="showCreateChannel = false">Cancelar</button>
+                  <button class="btn btn-primary" @click="createChannel" :disabled="!newChannelName">Crear Canal</button>
+                </div>
+              </div>
+            </div>
+          </transition>
 
           <!-- SECCIÓN: CHATS PRIVADOS (Estilo WhatsApp) -->
           <div class="sidebar-section">
