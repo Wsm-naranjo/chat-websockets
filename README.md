@@ -158,21 +158,11 @@ chat-websockets/
 │   ├── auth-check.js      # Verificación de sesión
 │   └── styles.css         # Estilos CSS
 ├── README.md              # Este archivo
-└── GUIA_TECNICA.md        # Documentación técnica detallada
 ```
 
 ## 🗄️ Base de Datos
 
-El proyecto crea automáticamente 3 tablas:
-
-### `users` - Usuarios registrados
-- `id`: Identificador único
-- `username`: Nombre de usuario (único)
-- `password_hash`: Contraseña hasheada con bcrypt
-- `avatar`: Emoji seleccionado
-- `color`: Color de acento
-- `created_at`: Fecha de registro
-- `last_login`: Último inicio de sesión
+El proyecto crea automáticamente 2 tablas:
 
 ### `sessions` - Sesiones activas
 - `id`: Identificador único
@@ -193,67 +183,10 @@ El proyecto crea automáticamente 3 tablas:
 - `type`: Tipo ('message' o 'system')
 - `created_at`: Timestamp del mensaje
 
-## 🔒 Seguridad
 
-- ✅ Contraseñas hasheadas con bcrypt (nunca en texto plano)
-- ✅ Prevención de SQL Injection con consultas parametrizadas
-- ✅ Tokens de sesión seguros (256 bits de entropía)
-- ✅ Validación de entrada en backend
-- ✅ Mensajes de error genéricos (previene enumeración de usuarios)
-- ✅ Autenticación requerida en WebSocket
-
-## 🐛 Solución de Problemas
-
-### Error: "No se pudo conectar a PostgreSQL"
-
-**Solución:**
-1. Verifica que PostgreSQL esté corriendo
-2. Revisa las credenciales en el archivo `.env`
-3. Asegúrate de que la base de datos `chat_websockets` exista
-
-**Nota:** Si PostgreSQL no está disponible, el chat funcionará en "Modo Fallback" usando memoria RAM (los datos se perderán al reiniciar).
-
-### Error: "El nombre de usuario ya existe"
-
-**Solución:** Elige otro nombre de usuario o elimina el usuario existente de la base de datos.
-
-### Los mensajes no se guardan
-
-**Solución:** Verifica que PostgreSQL esté conectado. Busca en la consola del servidor:
-```
-[Base de Datos] Conectado exitosamente a PostgreSQL local.
 ```
 
-## 📚 Documentación Adicional
 
-Para una guía técnica completa con explicaciones línea por línea, consulta:
-
-**[GUIA_TECNICA.md](./GUIA_TECNICA.md)**
-
-Incluye:
-- Explicación detallada de cada función
-- Diagramas de flujo
-- Conceptos clave para explicar al profesor
-- Consultas SQL útiles
-- Mejoras futuras sugeridas
-
-## 🎓 Para Estudiantes
-
-Este proyecto es ideal para aprender:
-- Autenticación de usuarios
-- WebSockets y comunicación en tiempo real
-- Bases de datos relacionales (PostgreSQL)
-- Seguridad web (bcrypt, SQL injection)
-- Arquitectura cliente-servidor
-- Vue.js y programación reactiva
-
-## 📝 Licencia
-
-Este proyecto es de código abierto y está disponible para fines educativos.
-
-## 👨‍💻 Autor
-
-Proyecto desarrollado como ejemplo educativo de chat en tiempo real con autenticación completa.
 
 ---
 
